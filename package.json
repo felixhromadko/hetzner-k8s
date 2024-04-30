@@ -6,6 +6,7 @@
     },
     "dependencies": {
         "@pulumi/hcloud": "^1.18.1",
+        "@pulumi/kubernetes": "^4.11.0",
         "@pulumi/pulumi": "^3.113.0",
         "@pulumiverse/talos": "^0.2.0",
         "typescript": "^5.0.0",

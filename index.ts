@@ -8,9 +8,15 @@ const HetznerImageId = '160372084'
 const HetznerInstanceName = 'cax11'
 const ClusterName = 'talos'
 
+const config = new pulumi.Config()
+export const hcloudToken = config.require('hcloud_token')
+
+new hcloud.Provider('hcloud', {
+  token: hcloudToken
+})
+
 
 // Basic Infra
-;
 const controlPlaneLb = new hcloud.LoadBalancer('control-plane-lb', {
   name: "control-plane",
   loadBalancerType: 'lb11',
@@ -168,9 +174,11 @@ contexts:
   `
 })
 
-const kubeConfig = pulumi.all([secrets.clientConfiguration, controlPlanes[0].ipv4Address, controlPlaneLb.ipv4]).apply(([config, node, lb]) => talos.cluster.getKubeconfig({
+export const kubeConfig = pulumi.all([secrets.clientConfiguration, controlPlanes[0].ipv4Address, controlPlaneLb.ipv4]).apply(([config, node, lb]) => talos.cluster.getKubeconfig({
     node: node,
     endpoint: lb,
     clientConfiguration: config
 }));
 export const kubeConfigYml = kubeConfig.kubeconfigRaw
+
+import "./k8s"
