@@ -1,0 +1,14 @@
+{
+    "name": "hetzner-k8s",
+    "main": "index.ts",
+    "devDependencies": {
+        "@types/node": "^18"
+    },
+    "dependencies": {
+        "@pulumi/hcloud": "^1.18.1",
+        "@pulumi/pulumi": "^3.113.0",
+        "@pulumiverse/talos": "^0.2.0",
+        "typescript": "^5.0.0",
+        "yaml": "^2.4.2"
+    }
+}
