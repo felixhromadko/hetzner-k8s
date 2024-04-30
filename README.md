@@ -12,9 +12,11 @@ pulumi stack output kubeConfigYml --show-secrets > kubeconfig
 export KUBECONFIG=./kubeconfig
 export TALOSCONFIG=./talosconfig
 ```
-Then, give the cluster time to bootstrap. 2-5 minutes, you can check the progress in the hetzner console. 
-
+Then, give the cluster time to bootstrap. 2-5 minutes, you can check the progress in the hetzner console.
 
 ```
 kubectl get nodes
 ```
+
+* Set IsBootstrapped = true
+* run `pulumi up` again

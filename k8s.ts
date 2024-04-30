@@ -72,7 +72,7 @@ new hcloud.LoadBalancerTarget('http-ingress-target', {
 const testNs = new kubernetes.core.v1.Namespace('test')
 
 const statefulPvc = new kubernetes.core.v1.PersistentVolumeClaim('test', {
-  metadata: {namespace: testNs.id},
+  metadata: {namespace: testNs.id, annotations: {"pulumi.com/skipAwait": "true"}},
   spec: {
     accessModes: ["ReadWriteOnce"],
     resources: {
@@ -82,6 +82,7 @@ const statefulPvc = new kubernetes.core.v1.PersistentVolumeClaim('test', {
     },
   }
 })
+
 new kubernetes.apps.v1.ReplicaSet('stateful-test', {
   metadata: {namespace: testNs.id},
   spec: {
@@ -96,8 +97,8 @@ new kubernetes.apps.v1.ReplicaSet('stateful-test', {
       spec: {
         containers: [{
           name: "stateful-test",
-          image: "busybox",
-          command: ['sleep', '5000'],
+          image: "alpine:latest",
+          command: ['tail', '-f', '/dev/null'],
           volumeMounts: [{
            name: 'data', mountPath: "/data",
           }],
@@ -159,7 +160,3 @@ const whoamiIngress = new kubernetes.networking.v1.Ingress('whoami-test', {
     }]
   }
 }, {})
-
-
-export const httpIngress = lbIngress.ipv4.apply(a => 'http://'+a )
-

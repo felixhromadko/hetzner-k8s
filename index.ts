@@ -2,11 +2,11 @@ import * as pulumi from "@pulumi/pulumi";
 import * as hcloud from "@pulumi/hcloud";
 import * as talos from "@pulumiverse/talos";
 import {ConfigurationApply} from "@pulumiverse/talos/machine";
-import * as YAML from 'yaml'
 
 const HetznerImageId = '160372084'
 const HetznerInstanceName = 'cax11'
 const ClusterName = 'talos'
+const IsBootstrapped = false
 
 const config = new pulumi.Config()
 export const hcloudToken = config.require('hcloud_token')
@@ -181,4 +181,7 @@ export const kubeConfig = pulumi.all([secrets.clientConfiguration, controlPlanes
 }));
 export const kubeConfigYml = kubeConfig.kubeconfigRaw
 
-import "./k8s"
+if (IsBootstrapped) {
+  import("./k8s");
+}
+
