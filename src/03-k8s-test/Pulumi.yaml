@@ -1,4 +1,4 @@
-name: hetzner-k8s
+name: k8s-test
 runtime: nodejs
 description: A minimal TypeScript Pulumi program
 config:

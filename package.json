@@ -1,6 +1,5 @@
 {
     "name": "hetzner-k8s",
-    "main": "index.ts",
     "devDependencies": {
         "@types/node": "^18"
     },

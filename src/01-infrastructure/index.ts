@@ -6,12 +6,11 @@ import {ConfigurationApply} from "@pulumiverse/talos/machine";
 const HetznerImageId = '160372084'
 const HetznerInstanceName = 'cax11'
 const ClusterName = 'talos'
-const IsBootstrapped = false
 
 const config = new pulumi.Config()
 export const hcloudToken = config.require('hcloud_token')
 
-new hcloud.Provider('hcloud', {
+const hp = new hcloud.Provider('hcloud', {
   token: hcloudToken
 })
 
@@ -21,26 +20,26 @@ const controlPlaneLb = new hcloud.LoadBalancer('control-plane-lb', {
   name: "control-plane",
   loadBalancerType: 'lb11',
   location: "fsn1",
-})
+}, {provider: hp})
 const controlPlaneLbId = controlPlaneLb.id.apply(a => parseInt(a))
 new hcloud.LoadBalancerService('control-plane-lb-service-k8s', {
   loadBalancerId: controlPlaneLb.id,
   listenPort: 6443,
   destinationPort: 6443,
   protocol: 'tcp',
-})
+}, {provider: hp})
 new hcloud.LoadBalancerService('control-plane-lb-service-talos', {
   loadBalancerId: controlPlaneLb.id,
   listenPort: 50000,
   destinationPort: 50000,
   protocol: 'tcp',
-})
+}, {provider: hp})
 new hcloud.LoadBalancerTarget('control-plane-lb-target', {
   loadBalancerId: controlPlaneLbId,
   labelSelector: "type=controlplane",
   type: "label_selector",
   usePrivateIp: false,
-})
+}, {provider: hp})
 
 
 // Prepare the Talos Cluster
@@ -111,7 +110,7 @@ for (let i = 0; i< 3; i++) {
     image: HetznerImageId,
     userData: controlPlaneConfig.machineConfiguration,
     labels: {type: 'controlplane'},
-  }, {ignoreChanges: ['userData']})
+  }, {ignoreChanges: ['userData'], provider: hp})
   controlPlanes.push(server)
 }
 
@@ -123,7 +122,7 @@ for (let i = 0; i< 2; i++) {
     image: HetznerImageId,
     userData: workerConfig.machineConfiguration,
     labels: {type: 'worker'},
-  }, {ignoreChanges: ['userData']})
+  }, {ignoreChanges: ['userData'], provider: hp})
   workers.push(server)
 }
 
@@ -180,8 +179,3 @@ export const kubeConfig = pulumi.all([secrets.clientConfiguration, controlPlanes
     clientConfiguration: config
 }));
 export const kubeConfigYml = kubeConfig.kubeconfigRaw
-
-if (IsBootstrapped) {
-  import("./k8s");
-}
-

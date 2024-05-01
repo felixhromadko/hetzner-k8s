@@ -1,6 +1,6 @@
 /bin/
 /node_modules/
-Pulumi.dev.yaml
+**/Pulumi.dev.yaml
 talosconfig
 kubeconfig
 .idea/
