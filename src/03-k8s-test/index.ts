@@ -2,12 +2,18 @@ import * as pulumi from "@pulumi/pulumi";
 import * as kubernetes from "@pulumi/kubernetes";
 import * as hcloud from "@pulumi/hcloud";
 
-const infraStackRef = new pulumi.StackReference('organization/infrastructure/dev')
+const config = new pulumi.Config()
+const ingress_host = config.get("ingress_host")
+
+
+const infraStackRef = new pulumi.StackReference('organization/infrastructure/main')
 const kubeConfig = infraStackRef.getOutput("kubeConfigYml")
 
 const k8sProvider = new kubernetes.Provider('talos', {
   kubeconfig: kubeConfig
 })
+
+
 
 // stuff to test
 const testNs = new kubernetes.core.v1.Namespace('test', {}, {provider: k8sProvider})
@@ -18,7 +24,7 @@ const statefulPvc = new kubernetes.core.v1.PersistentVolumeClaim('test', {
     accessModes: ["ReadWriteOnce"],
     resources: {
       requests: {
-        storage: "1Gi"
+        storage: "15Gi"
       }
     },
   }
@@ -83,9 +89,23 @@ const whoamiService = new kubernetes.core.v1.Service('whoami-test', {
 }, {provider: k8sProvider})
 
 const whoamiIngress = new kubernetes.networking.v1.Ingress('whoami-test', {
-  metadata: {namespace: testNs.id, annotations: {'pulumi.com/skipAwait': 'true'}},
+  metadata: {
+    namespace: testNs.id,
+    annotations: {
+      'pulumi.com/skipAwait': 'true',
+      'cert-manager.io/cluster-issuer': 'letsencrypt-prod',
+      'ingress.kubernetes.io/force-ssl-redirect': ingress_host === undefined ? 'false' : 'true',
+      'kubernetes.io/incress.class': 'contour',
+      'kubernetes.io/tls-acme': 'true'
+    }
+  },
   spec: {
+    tls: ingress_host ? [{
+      hosts: [ingress_host],
+      secretName: "whoami-test-tls"
+    }] : undefined,
     rules: [{
+      host: ingress_host,
       http: {
         paths: [{
           pathType: 'Prefix',

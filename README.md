@@ -7,12 +7,16 @@
 npm install
 
 cd src/01-infrastructure
-pulumi config set hcloud_token --secret
-pulumi up
+pulumi stack init main
+pulumi config set infrastructure:hcloud_token --secret 
+pulumi config set infrastructure:control_plane_count 1|3
+pulumi config set infrastructure:worker_count 1
+pulumi up 
 
-pulumi stack output talosConfig --show-secrets > talosconfig
-pulumi stack output kubeConfigYml --show-secrets > kubeconfig
+pulumi stack output talosConfig --show-secrets > ../../talosconfig
+pulumi stack output kubeConfigYml --show-secrets > ../../kubeconfig
 
+cd ../../
 export KUBECONFIG="$PWD/kubeconfig"
 export TALOSCONFIG="$PWD/talosconfig"
 ```
@@ -29,6 +33,8 @@ TODO: SSL with let's encrypt
 
 ```
 cd src/02-k8s-defaults
+pulumi stack init main
+pulumi config set k8s-defaults:stackgressEnabled false|true
 pulumi up
 
 write down the httpIngressIp
@@ -39,6 +45,10 @@ write down the httpIngressIp
 
 ```
 cd src/03-k8s-test
+pulumi up
+
+# if you have a domain (make sure there is an A-record pointing to the ingressIp)
+pulumi config set k8s-test:ingress_host <host>
 pulumi up
 ```
 

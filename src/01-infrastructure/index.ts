@@ -8,7 +8,14 @@ const HetznerInstanceName = 'cax11'
 const ClusterName = 'talos'
 
 const config = new pulumi.Config()
-export const hcloudToken = config.require('hcloud_token')
+export const hcloudToken = config.requireSecret('hcloud_token')
+const controlPlaneCount = config.requireNumber("control_plane_count")
+if (controlPlaneCount !== 1 && controlPlaneCount !== 3) {
+  throw new Error('control_plane_count must either be 1 or 3')
+}
+
+const workerCount = config.requireNumber("worker_count")
+
 
 const hp = new hcloud.Provider('hcloud', {
   token: hcloudToken
@@ -103,7 +110,7 @@ const workerConfig = talos.machine.getConfigurationOutput({
 // servers
 const locations = ['fsn1', 'nbg1']
 const controlPlanes = []
-for (let i = 0; i< 3; i++) {
+for (let i = 0; i< controlPlaneCount; i++) {
   const server = new hcloud.Server(`control-plane-${i}`, {
     location: locations[i%locations.length],
     serverType: HetznerInstanceName,
@@ -115,7 +122,7 @@ for (let i = 0; i< 3; i++) {
 }
 
 const workers = []
-for (let i = 0; i< 2; i++) {
+for (let i = 0; i< workerCount; i++) {
   const server = new hcloud.Server(`worker-${i}`, {
     location: locations[i%locations.length],
     serverType: HetznerInstanceName,
