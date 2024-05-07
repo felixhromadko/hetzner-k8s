@@ -29,8 +29,6 @@ kubectl get nodes
 ## 02-k8s-defaults
 > Hetzner-CSI, Project-contour reverse proxy
 
-TODO: SSL with let's encrypt
-
 ```
 cd src/02-k8s-defaults
 pulumi stack init main

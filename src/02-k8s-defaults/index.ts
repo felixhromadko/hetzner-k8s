@@ -126,8 +126,6 @@ if (postgresEnabled) {
   }, {provider: k8sProvider})
 }
 if (monitoringEnabled) {
-  const grafanaPassword = new random.RandomPassword('grafana-password', {length: 16})
-
   const monitoringNamespace = new kubernetes.core.v1.Namespace('kube-monitoring', {
     metadata: {
       name: "kube-monitoring",
@@ -136,51 +134,39 @@ if (monitoringEnabled) {
       }
     },
   }, {provider: k8sProvider})
-
-  const lgtmChart = new kubernetes.helm.v3.Release("lgtm-stack", {
-    name: 'lgtm-stack',
-    chart: "lgtm-distributed",
-    repositoryOpts: {
-      repo: "https://grafana.github.io/helm-charts",
-    },
+  const promOperator = new kubernetes.helm.v3.Release("kube-prometheus-stack", {
     namespace: monitoringNamespace.metadata.name,
+    name: "kube-prometheus-stack",
+    chart: "kube-prometheus-stack",
+    repositoryOpts: {
+      repo: "https://prometheus-community.github.io/helm-charts",
+    },
     values: {
       grafana: {
-        adminPassword: grafanaPassword.result,
-      }
-    }
-  }, {provider: k8sProvider});
-
-  const k8sMonitoring = new kubernetes.helm.v3.Release('kube-monitoring', {
-    chart: 'k8s-monitoring',
-    repositoryOpts: {
-      repo: "https://grafana.github.io/helm-charts",
-    },
-    namespace: monitoringNamespace.metadata.name,
-    values: {
-      cluster: {
-        name: "k8s-cluster"
+        persistence: {
+          enabled: true,
+          accessModes: ["ReadWriteOnce"],
+          size: "5Gi"
+        }
       },
-      opencost: {
-        enabled: false
-      },
-      externalServices: {
-        cost: {
-          enabled: false,
-        },
-        loki: {
-          host: 'http://lgtm-stack-loki-gateway',
-          username: "",
-          password: "",
-        },
-        prometheus: {
-          host: 'http://lgtm-stack-mimir-nginx',
-          writeEndpoint: '/api/v1/push',
-          queryEndpoint: '/prometheus/api/v1/query',
-          username: "",
-          password: "",
+      prometheus: {
+        prometheusSpec: {
+          podMonitorSelectorNilUsesHelmValues: false,
+          storageSpec: {
+            volumeClaimTemplate: {
+              spec: {
+                accessModes: ["ReadWriteOnce"],
+                resources: {
+                  requests: {
+                    storage: '5Gi'
+                  }
+                }
+              },
+              selector: {}
+            }
+          }
         }
       }
     }
-  }, {provider: k8sProvider})
+  }, {provider: k8sProvider});
 }
