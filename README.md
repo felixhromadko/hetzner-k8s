@@ -34,7 +34,8 @@ TODO: SSL with let's encrypt
 ```
 cd src/02-k8s-defaults
 pulumi stack init main
-pulumi config set k8s-defaults:stackgressEnabled false|true
+pulumi config set k8s-defaults:postgres_enabled false|true
+pulumi config set k8s-defaults:monitoring_enabled false|true
 pulumi up
 
 write down the httpIngressIp

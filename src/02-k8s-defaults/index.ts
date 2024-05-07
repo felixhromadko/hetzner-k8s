@@ -2,15 +2,17 @@ import * as pulumi from "@pulumi/pulumi";
 import * as kubernetes from "@pulumi/kubernetes";
 import * as hcloud from "@pulumi/hcloud";
 import * as certmanager from "@pulumi/kubernetes-cert-manager";
+import * as random from '@pulumi/random'
 
 const config = new pulumi.Config()
 
-const stackgressEnabled = config.getBoolean("stackgress_enabled")
-
+const postgresEnabled = config.getBoolean("postgres_enabled")
+const monitoringEnabled = config.getBoolean("monitoring_enabled")
 
 const infraStackRef = new pulumi.StackReference('organization/infrastructure/main')
 const kubeConfig = infraStackRef.getOutput("kubeConfigYml")
 const hcloudToken = infraStackRef.getOutput("hcloudToken")
+
 
 const hcloudProvider = new hcloud.Provider('hcloud', {
   token: hcloudToken,
@@ -113,14 +115,72 @@ const letsEncryptClusterIssuer = new kubernetes.apiextensions.CustomResource("le
 export const HttpIngressIp = lbIngress.ipv4
 
 
-// stackgress
-if (stackgressEnabled) {
-  new kubernetes.helm.v3.Release('stackgress-operator', {
-    chart: "stackgres-operator",
+if (postgresEnabled) {
+  new kubernetes.helm.v3.Release('cnpg', {
+    chart: "cloudnative-pg",
     createNamespace: true,
-    namespace: "stackgress",
+    namespace: "cnpg-system",
     repositoryOpts: {
-      repo: "https://stackgres.io/downloads/stackgres-k8s/stackgres/helm/"
+      repo: "https://cloudnative-pg.github.io/charts"
+    }
+  }, {provider: k8sProvider})
+}
+if (monitoringEnabled) {
+  const grafanaPassword = new random.RandomPassword('grafana-password', {length: 16})
+
+  const monitoringNamespace = new kubernetes.core.v1.Namespace('kube-monitoring', {
+    metadata: {
+      name: "kube-monitoring",
+      labels: {
+        "pod-security.kubernetes.io/enforce": "privileged"
+      }
+    },
+  }, {provider: k8sProvider})
+
+  const lgtmChart = new kubernetes.helm.v3.Release("lgtm-stack", {
+    name: 'lgtm-stack',
+    chart: "lgtm-distributed",
+    repositoryOpts: {
+      repo: "https://grafana.github.io/helm-charts",
+    },
+    namespace: monitoringNamespace.metadata.name,
+    values: {
+      grafana: {
+        adminPassword: grafanaPassword.result,
+      }
+    }
+  }, {provider: k8sProvider});
+
+  const k8sMonitoring = new kubernetes.helm.v3.Release('kube-monitoring', {
+    chart: 'k8s-monitoring',
+    repositoryOpts: {
+      repo: "https://grafana.github.io/helm-charts",
+    },
+    namespace: monitoringNamespace.metadata.name,
+    values: {
+      cluster: {
+        name: "k8s-cluster"
+      },
+      opencost: {
+        enabled: false
+      },
+      externalServices: {
+        cost: {
+          enabled: false,
+        },
+        loki: {
+          host: 'http://lgtm-stack-loki-gateway',
+          username: "",
+          password: "",
+        },
+        prometheus: {
+          host: 'http://lgtm-stack-mimir-nginx',
+          writeEndpoint: '/api/v1/push',
+          queryEndpoint: '/prometheus/api/v1/query',
+          username: "",
+          password: "",
+        }
+      }
     }
   }, {provider: k8sProvider})
 }
